@@ -58,9 +58,9 @@ impl Component for Model {
                         <p>{ "[Display of current updated indicators here (or message saying none)]"}</p>
                         <hr />
                         <div id="buttons">
-                            <button class="left">{ "Add Indicator ➠" }</button>
+                            <button class="left">{ "➕ Add Indicator ➠" }</button>
                             <select class="right" name="add"></select>
-                            <button class="left">{ "Remove Indicator ➠" }</button>
+                            <button class="left">{ "➖ Remove Indicator ➠" }</button>
                             <select class="right" name="remove"></select>
                         </div>
                     </div>

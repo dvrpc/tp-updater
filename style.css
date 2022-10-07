@@ -11,6 +11,7 @@ html {
 }
 
 body {
+	font-size: 18px;
 	margin: 0;
 	padding: 0;
 	display: grid;
@@ -48,11 +49,14 @@ main {
 	color: var(--tope);
 }
 
-#left h1 {
+h1 {
 	margin-top: 0;
 	padding-top: 0;
-	font-size: 50px;
 	text-align: center;
+}
+
+#left h1 {
+	font-size: 50px;
 }
 
 #right {
@@ -64,10 +68,7 @@ main {
 }
 
 #right h1 {
-	margin-top: 0;
-	padding-top: 0;
 	font-size: 35px;
-	text-align: center;
 }
 
 #buttons {
@@ -94,7 +95,6 @@ main {
 }
 
 button {
-
 	font-size: 16px;
 	width: fit-content;
 	padding: 10px;
@@ -105,3 +105,9 @@ button {
 	background-color: var(--white);
 	box-shadow: var(--shadow);
 }
+
+button:hover {
+	background-color: var(--teal);
+	color: var(--tope);
+}
+
