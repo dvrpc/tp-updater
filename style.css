@@ -1,3 +1,11 @@
+:root {
+	--shadow: 0px 5px 5px 0px rgba(0,0,0,0.2);
+	--white: hsl(0, 0%, 90%);
+	--teal: hsl(170, 34%, 53%);
+	--tope: hsl(54, 35%, 92%);
+	--tope-darker: hsl(54, 35%, 52%);
+}
+
 html {
 	font-family: Arial;
 }
@@ -17,9 +25,9 @@ header {
 	display: grid;
 	align-content: center;
 	padding: 5px 50px 5px 50px;
-	background-color: white;
+	background-color: var(--white);
 	border: 1px solid;
-	box-shadow: 0px 5px 5px 0px rgba(0,0,0,0.2);
+	box-shadow: var(--shadow);
 	z-index: 10;
 }
 
@@ -36,8 +44,8 @@ main {
 	display: grid;
 	align-content: center;
 	padding: 50px;
-	background-color: green;
-	color: white;
+	background-color: var(--teal);
+	color: var(--tope);
 }
 
 #left h1 {
@@ -52,7 +60,7 @@ main {
 	display: grid;
 	align-content: center;
 	padding: 50px;
-	background-color: gray;
+	background-color: var(--tope);
 }
 
 #right h1 {
@@ -60,4 +68,40 @@ main {
 	padding-top: 0;
 	font-size: 35px;
 	text-align: center;
+}
+
+#buttons {
+	border-top: 2px solid var(--teal);
+	padding-top: 25px;
+	width: fit-content;
+	display: grid;
+	grid-template-areas:
+		"one two"
+		"three four";
+	gap: 20px;
+	justify-content: center;
+	justify-self: center;
+}
+
+.left {
+	display: grid;
+	justify-self: end;
+}
+
+.right {
+	display: grid;
+	justify-self: start;
+}
+
+button {
+
+	font-size: 16px;
+	width: fit-content;
+	padding: 10px;
+	margin: 5px;
+	border-radius: 25px;
+	border: 2px solid var(--teal);
+	outline: none;
+	background-color: var(--white);
+	box-shadow: var(--shadow);
 }

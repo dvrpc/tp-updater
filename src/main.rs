@@ -4,6 +4,32 @@ struct Model {}
 
 enum Msg {}
 
+enum Indicators {
+    AirQuality,
+    BridgeConditions,
+    CommuteMode,
+    Congestion,
+    EducationalAttainment,
+    ExportedGoods,
+    GlobalConnectivity,
+    GreenhouseGasEmissions,
+    HousingActivity,
+    HousingAffordability,
+    IncomeDisparities,
+    Innovataion,
+    JobGrowth,
+    LandConsumption,
+    MilesDriven,
+    PavementConditions,
+    PopulationGrowth,
+    RacialAndEthnicDisparies,
+    RoadwaySafety,
+    SexDisparities,
+    TransitConditions,
+    TransitRidership,
+    WaterQuality,
+}
+
 impl Component for Model {
     type Message = Msg;
     type Properties = ();
@@ -31,8 +57,12 @@ impl Component for Model {
                         <h1>{ "Updated Indicators" }</h1>
                         <p>{ "[Display of current updated indicators here (or message saying none)]"}</p>
                         <hr />
-                        <button>{ "Add Indicator" }</button>
-                        <button>{ "Remove Indicator" }</button>
+                        <div id="buttons">
+                            <button class="left">{ "Add Indicator ➠" }</button>
+                            <select class="right" name="add"></select>
+                            <button class="left">{ "Remove Indicator ➠" }</button>
+                            <select class="right" name="remove"></select>
+                        </div>
                     </div>
                 </main>
             </>
