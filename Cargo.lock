@@ -387,7 +387,9 @@ dependencies = [
 name = "tp-updater"
 version = "0.1.0"
 dependencies = [
+ "gloo-console",
  "gloo-net",
+ "web-sys",
  "yew",
 ]
 

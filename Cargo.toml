@@ -8,4 +8,6 @@ authors = ["Kris Warner <kdwarn@protonmail.com>"]
 
 [dependencies]
 gloo-net = "0.2.4"
+gloo-console = "0.2.3"
+web-sys = "0.3.60"
 yew = "0.19"
