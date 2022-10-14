@@ -108,3 +108,7 @@ select:hover, button:hover {
 	background-color: var(--teal);
 	color: var(--tope);
 }
+
+.center {
+	text-align: center;
+}

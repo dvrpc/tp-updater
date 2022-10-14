@@ -1,15 +1,35 @@
 use gloo_console::log;
+use gloo_net::http::Request;
 use web_sys::HtmlInputElement;
 use yew::prelude::*;
 
+const API_BASE: &str = "http://localhost:8000/tracking-progress/v1";
+
+/// Fetch recently updated indicators from API
+async fn get_updated_indicators() -> Result<Vec<String>, String> {
+    let fetched_ur = Request::get(&format!("{API_BASE}/indicators")).send().await;
+
+    match fetched_ur {
+        Ok(response) => {
+            let json: Result<Vec<String>, _> = response.json().await;
+            match json {
+                Ok(v) => Ok(v),
+                Err(e) => Err(e.to_string()),
+            }
+        }
+        Err(e) => Err(e.to_string()),
+    }
+}
 enum Msg {
     Add,
     Remove,
     Select(String),
+    SetCurrentIndicators(Vec<String>),
 }
 
 struct Model {
     indicator: Option<String>,
+    updated_indicators: Vec<String>,
 }
 
 const INDICATORS: &[&str] = &[
@@ -43,7 +63,10 @@ impl Component for Model {
     type Properties = ();
 
     fn create(_ctx: &Context<Self>) -> Self {
-        Model { indicator: None }
+        Model {
+            indicator: None,
+            updated_indicators: vec![],
+        }
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
@@ -52,6 +75,12 @@ impl Component for Model {
         let onchange = link.callback(|e: Event| {
             Msg::Select(e.target_unchecked_into::<HtmlInputElement>().value())
         });
+
+        let updated_indicators = if self.updated_indicators.is_empty() {
+            html! { <p>{ "There are no recently updated indicators."}</p> }
+        } else {
+            html! { <p>{ format!("{:#?}", self.updated_indicators) }</p> }
+        };
 
         let indicators = INDICATORS
             .iter()
@@ -77,7 +106,8 @@ impl Component for Model {
                     </div>
                     <div id="right">
                         <h1>{ "Updated Indicators" }</h1>
-                        <p>{ "[Display of current updated indicators here (or message saying none)]"}</p>
+
+                        <p class="center">{ updated_indicators }</p>
                         <hr />
                         <div id="update-area">
                             <select {onchange}>
@@ -113,8 +143,21 @@ impl Component for Model {
                     self.indicator = Some(ind);
                 }
             }
+            Msg::SetCurrentIndicators(v) => {
+                self.updated_indicators = v;
+            }
         };
         true
+    }
+    fn rendered(&mut self, ctx: &Context<Self>, first_render: bool) {
+        if first_render {
+            ctx.link().send_future(async {
+                match get_updated_indicators().await {
+                    Ok(v) => Msg::SetCurrentIndicators(v),
+                    Err(e) => Msg::SetCurrentIndicators(vec![e]),
+                }
+            });
+        }
     }
 }
 
