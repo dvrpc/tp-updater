@@ -1,9 +1,10 @@
+use dotenvy_macro::dotenv;
 use gloo_console::log;
 use gloo_net::http::Request;
 use web_sys::HtmlInputElement;
 use yew::prelude::*;
 
-const API_BASE: &str = "http://localhost:8000/tracking-progress/v1";
+const API_BASE: &str = dotenv!("API_BASE");
 
 /// Fetch recently updated indicators from API
 async fn get_updated_indicators() -> Result<Vec<String>, String> {

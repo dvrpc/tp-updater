@@ -37,6 +37,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "dotenvy"
+version = "0.15.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "03d8c417d7a8cb362e0c37e5d815f5eb7c37f79ff93707329d5a194e42e54ca0"
+
+[[package]]
+name = "dotenvy_codegen_impl"
+version = "0.15.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e05611d49f33180c6989e426b1d63a5ac0651307f0459321b67b38cd9861d050"
+dependencies = [
+ "dotenvy",
+ "proc-macro-hack",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "dotenvy_macro"
+version = "0.15.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f559fff643c8f40279ab9bc50dd3734c22efc1f386972995f52892fe414722a7"
+dependencies = [
+ "dotenvy_codegen_impl",
+ "proc-macro-hack",
+]
+
+[[package]]
 name = "futures-channel"
 version = "0.3.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -283,6 +312,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "proc-macro-hack"
+version = "0.5.19"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dbf0c48bc1d91375ae5c3cd81e3722dff1abcf81a30960240640d223f59fe0e5"
+
+[[package]]
 name = "proc-macro2"
 version = "1.0.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -387,6 +422,7 @@ dependencies = [
 name = "tp-updater"
 version = "0.1.0"
 dependencies = [
+ "dotenvy_macro",
  "gloo-console",
  "gloo-net",
  "web-sys",
