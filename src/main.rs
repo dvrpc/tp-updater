@@ -36,10 +36,10 @@ const INDICATORS: &[&str] = &[
 ];
 
 enum Msg {
+    SelectIndicator(String),
     Add,
     Remove,
-    Status(String),
-    SelectIndicator(String),
+    Confirm(String),
     GetUpdatedIndicators,
     SetUpdatedIndicators(Vec<String>),
     Error(String),
@@ -48,7 +48,7 @@ enum Msg {
 struct Model {
     selected_indicator: Option<String>,
     updated_indicators: Vec<String>,
-    update_status: Option<String>,
+    confirmation_message: Option<String>,
     error: Option<String>,
 }
 
@@ -60,7 +60,7 @@ impl Component for Model {
         Model {
             selected_indicator: None,
             updated_indicators: vec![],
-            update_status: None,
+            confirmation_message: None,
             error: None,
         }
     }
@@ -121,7 +121,7 @@ impl Component for Model {
                                 { "Remove It" }
                             </button>
                         </div>
-                        if let Some(v) = &self.update_status {
+                        if let Some(v) = &self.confirmation_message {
                             <p>{ format!("{}", v) }</p>
                         }
                     </div>
@@ -142,17 +142,24 @@ impl Component for Model {
         self.error = None;
 
         match msg {
+            Msg::SelectIndicator(ind) => {
+                if !INDICATORS.contains(&ind.as_str()) {
+                    self.selected_indicator = None;
+                } else {
+                    self.selected_indicator = Some(ind);
+                }
+            }
             Msg::Add => match self.selected_indicator.clone() {
                 None => link.send_message(Msg::Error("No indicator selected".to_string())),
                 Some(v) => link.send_future(async move {
                     match Request::post(&format!("{API_BASE}/indicators"))
-                        .json(&HashMap::from([("name", v.clone())]))
+                        .json(&HashMap::from([("name", v)]))
                         .unwrap()
                         .send()
                         .await
                     {
                         Ok(r) => match r.status() {
-                            201 => Msg::Status("Indicator added".to_string()),
+                            201 => Msg::Confirm("Indicator added".to_string()),
                             500 => {
                                 Msg::Error("Error with API, please try again later.".to_string())
                             }
@@ -167,13 +174,13 @@ impl Component for Model {
                 None => link.send_message(Msg::Error("No indicator selected".to_string())),
                 Some(v) => link.send_future(async move {
                     match Request::delete(&format!("{API_BASE}/indicators"))
-                        .json(&HashMap::from([("name", v.clone())]))
+                        .json(&HashMap::from([("name", &v)]))
                         .unwrap()
                         .send()
                         .await
                     {
                         Ok(r) => match r.status() {
-                            200 => Msg::Status("Indicator removed".to_string()),
+                            200 => Msg::Confirm("Indicator removed".to_string()),
                             404 => Msg::Error(format!(
                                 "Cannot remove {v}: not a recently updated indicator."
                             )),
@@ -186,8 +193,9 @@ impl Component for Model {
                     }
                 }),
             },
-            Msg::Error(error) => {
-                self.error = Some(error);
+            Msg::Confirm(message) => {
+                self.confirmation_message = Some(message);
+                link.send_message(Msg::GetUpdatedIndicators)
             }
             Msg::GetUpdatedIndicators => {
                 link.send_future(async {
@@ -210,19 +218,11 @@ impl Component for Model {
                     }
                 });
             }
-            Msg::Status(status) => {
-                self.update_status = Some(status);
-                link.send_message(Msg::GetUpdatedIndicators)
-            }
-            Msg::SelectIndicator(ind) => {
-                if !INDICATORS.contains(&ind.as_str()) {
-                    self.selected_indicator = None;
-                } else {
-                    self.selected_indicator = Some(ind);
-                }
-            }
             Msg::SetUpdatedIndicators(v) => {
                 self.updated_indicators = v;
+            }
+            Msg::Error(error) => {
+                self.error = Some(error);
             }
         };
         true
