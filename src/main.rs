@@ -2,7 +2,11 @@ use std::collections::HashMap;
 
 use dotenvy_macro::dotenv;
 use gloo_console::log;
-use gloo_net::http::Request;
+use gloo_dialogs::alert;
+use gloo_net::{
+    http::{Request, Response},
+    Error,
+};
 use web_sys::HtmlInputElement;
 use yew::prelude::*;
 
@@ -13,7 +17,9 @@ enum Msg {
     Remove,
     Status(String),
     Select(String),
+    GetIndicators,
     SetCurrentIndicators(Vec<String>),
+    Error(String),
 }
 
 /// Fetch recently updated indicators from API
@@ -36,41 +42,32 @@ async fn get_updated_indicators() -> Result<Vec<String>, String> {
 }
 
 /// Add new indicator
-async fn add_indicator(indicator: String) -> Result<String, String> {
+async fn add_indicator(indicator: String) -> Result<Response, Error> {
     let payload = HashMap::from([("name", indicator)]);
 
-    let r = Request::post(&format!("{API_BASE}/indicators"))
+    Request::post(&format!("{API_BASE}/indicators"))
         .json(&payload)
         .unwrap()
         .send()
-        .await;
-
-    match r {
-        Ok(_) => Ok("ok".to_string()),
-        Err(e) => Err(e.to_string()),
-    }
+        .await
 }
 
 /// Delete indicator
-async fn remove_indicator(indicator: String) -> Result<String, String> {
+async fn remove_indicator(indicator: String) -> Result<Response, Error> {
     let payload = HashMap::from([("name", indicator)]);
 
-    let r = Request::delete(&format!("{API_BASE}/indicators"))
+    Request::delete(&format!("{API_BASE}/indicators"))
         .json(&payload)
         .unwrap()
         .send()
-        .await;
-
-    match r {
-        Ok(_) => Ok("ok".to_string()),
-        Err(e) => Err(e.to_string()),
-    }
+        .await
 }
 
 struct Model {
     indicator: Option<String>,
     updated_indicators: Vec<String>,
     update_status: Option<String>,
+    error: Option<String>,
 }
 
 const INDICATORS: &[&str] = &[
@@ -108,10 +105,15 @@ impl Component for Model {
             indicator: None,
             updated_indicators: vec![],
             update_status: None,
+            error: None,
         }
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
+        if let Some(v) = &self.error {
+            alert(&v);
+        }
+
         let link = ctx.link();
 
         let onchange = link.callback(|e: Event| {
@@ -178,35 +180,53 @@ impl Component for Model {
         }
     }
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
+        let link = ctx.link();
+
+        // clear any existing errors
+        self.error = None;
+
         match msg {
             Msg::Add => match self.indicator.clone() {
-                None => (),
-                Some(v) => ctx.link().send_future(async move {
+                None => link.send_message(Msg::Error("No indicator selected".to_string())),
+                Some(v) => link.send_future(async move {
                     match add_indicator(v).await {
-                        Ok(_) => Msg::Status("Indicator added".to_string()),
-                        Err(e) => Msg::Status(e.to_string()),
+                        Ok(r) => match r.status() {
+                            201 => Msg::Status("Indicator added".to_string()),
+                            _ => Msg::Status("".to_string()),
+                        },
+                        Err(e) => Msg::Error(e.to_string()),
                     }
                 }),
             },
             Msg::Remove => match self.indicator.clone() {
-                None => (),
-                Some(v) => {
-                    ctx.link().send_future(async move {
-                        match remove_indicator(v).await {
-                            Ok(_) => Msg::Status("Indicator removed".to_string()),
-                            Err(e) => Msg::Status(e.to_string()),
-                        }
-                    });
-                }
+                None => link.send_message(Msg::Error("No indicator selected".to_string())),
+                Some(v) => link.send_future(async move {
+                    match remove_indicator(v).await {
+                        Ok(r) => match r.status() {
+                            200 => Msg::Status("Indicator removed".to_string()),
+                            404 => Msg::Error(
+                                "Indicator not in list of recently updated indicators.".to_string(),
+                            ),
+                            _ => Msg::Status("".to_string()),
+                        },
+                        Err(e) => Msg::Error(e.to_string()),
+                    }
+                }),
             },
-            Msg::Status(status) => {
-                self.update_status = Some(status);
+            Msg::Error(error) => {
+                self.error = Some(error);
+            }
+            Msg::GetIndicators => {
                 ctx.link().send_future(async {
                     match get_updated_indicators().await {
                         Ok(v) => Msg::SetCurrentIndicators(v),
-                        Err(e) => Msg::SetCurrentIndicators(vec![e]),
+                        Err(e) => Msg::Error(e.to_string()),
                     }
-                })
+                });
+            }
+            Msg::Status(status) => {
+                self.update_status = Some(status);
+                link.send_message(Msg::GetIndicators)
             }
             Msg::Select(ind) => {
                 if !INDICATORS.contains(&ind.as_str()) {
@@ -223,12 +243,7 @@ impl Component for Model {
     }
     fn rendered(&mut self, ctx: &Context<Self>, first_render: bool) {
         if first_render {
-            ctx.link().send_future(async {
-                match get_updated_indicators().await {
-                    Ok(v) => Msg::SetCurrentIndicators(v),
-                    Err(e) => Msg::SetCurrentIndicators(vec![e]),
-                }
-            });
+            ctx.link().send_message(Msg::GetIndicators)
         }
     }
 }

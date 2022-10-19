@@ -424,7 +424,9 @@ version = "0.1.0"
 dependencies = [
  "dotenvy_macro",
  "gloo-console",
+ "gloo-dialogs",
  "gloo-net",
+ "wasm-bindgen-futures",
  "web-sys",
  "yew",
 ]
