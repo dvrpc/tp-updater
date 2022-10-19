@@ -3,72 +3,11 @@ use std::collections::HashMap;
 use dotenvy_macro::dotenv;
 use gloo_console::log;
 use gloo_dialogs::alert;
-use gloo_net::{
-    http::{Request, Response},
-    Error,
-};
+use gloo_net::http::Request;
 use web_sys::HtmlInputElement;
 use yew::prelude::*;
 
 const API_BASE: &str = dotenv!("API_BASE");
-
-enum Msg {
-    Add,
-    Remove,
-    Status(String),
-    Select(String),
-    GetIndicators,
-    SetCurrentIndicators(Vec<String>),
-    Error(String),
-}
-
-/// Fetch recently updated indicators from API
-async fn get_updated_indicators() -> Result<Vec<String>, String> {
-    let r = Request::get(&format!("{API_BASE}/indicators")).send().await;
-
-    match r {
-        Ok(response) => {
-            let json: Result<Vec<String>, _> = response.json().await;
-            match json {
-                Ok(mut v) => {
-                    v.sort();
-                    Ok(v)
-                }
-                Err(e) => Err(e.to_string()),
-            }
-        }
-        Err(e) => Err(e.to_string()),
-    }
-}
-
-/// Add new indicator
-async fn add_indicator(indicator: String) -> Result<Response, Error> {
-    let payload = HashMap::from([("name", indicator)]);
-
-    Request::post(&format!("{API_BASE}/indicators"))
-        .json(&payload)
-        .unwrap()
-        .send()
-        .await
-}
-
-/// Delete indicator
-async fn remove_indicator(indicator: String) -> Result<Response, Error> {
-    let payload = HashMap::from([("name", indicator)]);
-
-    Request::delete(&format!("{API_BASE}/indicators"))
-        .json(&payload)
-        .unwrap()
-        .send()
-        .await
-}
-
-struct Model {
-    indicator: Option<String>,
-    updated_indicators: Vec<String>,
-    update_status: Option<String>,
-    error: Option<String>,
-}
 
 const INDICATORS: &[&str] = &[
     "Air Quality",
@@ -96,13 +35,30 @@ const INDICATORS: &[&str] = &[
     "Water Quality",
 ];
 
+enum Msg {
+    Add,
+    Remove,
+    Status(String),
+    SelectIndicator(String),
+    GetUpdatedIndicators,
+    SetUpdatedIndicators(Vec<String>),
+    Error(String),
+}
+
+struct Model {
+    selected_indicator: Option<String>,
+    updated_indicators: Vec<String>,
+    update_status: Option<String>,
+    error: Option<String>,
+}
+
 impl Component for Model {
     type Message = Msg;
     type Properties = ();
 
     fn create(_ctx: &Context<Self>) -> Self {
         Model {
-            indicator: None,
+            selected_indicator: None,
             updated_indicators: vec![],
             update_status: None,
             error: None,
@@ -117,7 +73,7 @@ impl Component for Model {
         let link = ctx.link();
 
         let onchange = link.callback(|e: Event| {
-            Msg::Select(e.target_unchecked_into::<HtmlInputElement>().value())
+            Msg::SelectIndicator(e.target_unchecked_into::<HtmlInputElement>().value())
         });
 
         let updated_indicators = if self.updated_indicators.is_empty() {
@@ -182,32 +138,49 @@ impl Component for Model {
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         let link = ctx.link();
 
-        // clear any existing errors
+        // clear any previous errors
         self.error = None;
 
         match msg {
-            Msg::Add => match self.indicator.clone() {
+            Msg::Add => match self.selected_indicator.clone() {
                 None => link.send_message(Msg::Error("No indicator selected".to_string())),
                 Some(v) => link.send_future(async move {
-                    match add_indicator(v).await {
+                    match Request::post(&format!("{API_BASE}/indicators"))
+                        .json(&HashMap::from([("name", v.clone())]))
+                        .unwrap()
+                        .send()
+                        .await
+                    {
                         Ok(r) => match r.status() {
                             201 => Msg::Status("Indicator added".to_string()),
-                            _ => Msg::Status("".to_string()),
+                            500 => {
+                                Msg::Error("Error with API, please try again later.".to_string())
+                            }
+                            _ => Msg::Error("Undefined response from API".to_string()),
                         },
+
                         Err(e) => Msg::Error(e.to_string()),
                     }
                 }),
             },
-            Msg::Remove => match self.indicator.clone() {
+            Msg::Remove => match self.selected_indicator.clone() {
                 None => link.send_message(Msg::Error("No indicator selected".to_string())),
                 Some(v) => link.send_future(async move {
-                    match remove_indicator(v).await {
+                    match Request::delete(&format!("{API_BASE}/indicators"))
+                        .json(&HashMap::from([("name", v.clone())]))
+                        .unwrap()
+                        .send()
+                        .await
+                    {
                         Ok(r) => match r.status() {
                             200 => Msg::Status("Indicator removed".to_string()),
-                            404 => Msg::Error(
-                                "Indicator not in list of recently updated indicators.".to_string(),
-                            ),
-                            _ => Msg::Status("".to_string()),
+                            404 => Msg::Error(format!(
+                                "Cannot remove {v}: not a recently updated indicator."
+                            )),
+                            500 => {
+                                Msg::Error("Error with API, please try again later.".to_string())
+                            }
+                            _ => Msg::Error("Undefined response from API".to_string()),
                         },
                         Err(e) => Msg::Error(e.to_string()),
                     }
@@ -216,26 +189,39 @@ impl Component for Model {
             Msg::Error(error) => {
                 self.error = Some(error);
             }
-            Msg::GetIndicators => {
-                ctx.link().send_future(async {
-                    match get_updated_indicators().await {
-                        Ok(v) => Msg::SetCurrentIndicators(v),
+            Msg::GetUpdatedIndicators => {
+                link.send_future(async {
+                    match Request::get(&format!("{API_BASE}/indicators")).send().await {
+                        Ok(r) => match r.status() {
+                            200 => {
+                                let json: Result<Vec<String>, _> = r.json().await;
+                                match json {
+                                    Ok(mut v) => {
+                                        v.sort();
+                                        Msg::SetUpdatedIndicators(v)
+                                    }
+                                    Err(e) => Msg::Error(e.to_string()),
+                                }
+                            }
+                            500 => Msg::Error("Error with API, please try again later".to_string()),
+                            _ => Msg::Error("Undefined response from API".to_string()),
+                        },
                         Err(e) => Msg::Error(e.to_string()),
                     }
                 });
             }
             Msg::Status(status) => {
                 self.update_status = Some(status);
-                link.send_message(Msg::GetIndicators)
+                link.send_message(Msg::GetUpdatedIndicators)
             }
-            Msg::Select(ind) => {
+            Msg::SelectIndicator(ind) => {
                 if !INDICATORS.contains(&ind.as_str()) {
-                    self.indicator = None;
+                    self.selected_indicator = None;
                 } else {
-                    self.indicator = Some(ind);
+                    self.selected_indicator = Some(ind);
                 }
             }
-            Msg::SetCurrentIndicators(v) => {
+            Msg::SetUpdatedIndicators(v) => {
                 self.updated_indicators = v;
             }
         };
@@ -243,7 +229,7 @@ impl Component for Model {
     }
     fn rendered(&mut self, ctx: &Context<Self>, first_render: bool) {
         if first_render {
-            ctx.link().send_message(Msg::GetIndicators)
+            ctx.link().send_message(Msg::GetUpdatedIndicators)
         }
     }
 }
