@@ -45,19 +45,19 @@ enum Msg {
     Error(String),
 }
 
-struct Model {
+struct App {
     selected_indicator: Option<String>,
     updated_indicators: Vec<String>,
     confirmation_message: Option<String>,
     error: Option<String>,
 }
 
-impl Component for Model {
+impl Component for App {
     type Message = Msg;
     type Properties = ();
 
     fn create(_ctx: &Context<Self>) -> Self {
-        Model {
+        App {
             selected_indicator: None,
             updated_indicators: vec![],
             confirmation_message: None,
@@ -235,5 +235,5 @@ impl Component for Model {
 }
 
 fn main() {
-    yew::start_app::<Model>();
+    yew::Renderer::<App>::new().render();
 }

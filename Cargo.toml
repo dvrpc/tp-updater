@@ -13,4 +13,4 @@ gloo-dialogs = "0.1.1"
 gloo-net = "0.2.4"
 wasm-bindgen-futures = "0.4.33"
 web-sys = "0.3.60"
-yew = "0.19"
+yew = {version = "0.20", features = ["csr"] }
