@@ -67,7 +67,7 @@ impl Component for App {
 
     fn view(&self, ctx: &Context<Self>) -> Html {
         if let Some(v) = &self.error {
-            alert(&v);
+            alert(v);
         }
 
         let link = ctx.link();
