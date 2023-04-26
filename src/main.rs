@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
+use base64::{engine::general_purpose, Engine};
 use dotenvy_macro::dotenv;
-use gloo_console::log;
 use gloo_dialogs::alert;
 use gloo_net::http::Request;
 use web_sys::HtmlInputElement;
@@ -141,6 +141,13 @@ impl Component for App {
         // clear any previous errors
         self.error = None;
 
+        // base64 encode credentials for Basic Authentication
+        let mut credentials = general_purpose::STANDARD.encode(format!(
+            "{}:{}",
+            dotenv!("USERID"),
+            dotenv!("PASSWORD")
+        ));
+        credentials = format!("Basic {credentials}");
         match msg {
             Msg::SelectIndicator(ind) => {
                 if !INDICATORS.contains(&ind.as_str()) {
@@ -153,6 +160,7 @@ impl Component for App {
                 None => link.send_message(Msg::Error("No indicator selected".to_string())),
                 Some(v) => link.send_future(async move {
                     match Request::post(&format!("{API_BASE}/indicators"))
+                        .header("Authorization", &credentials)
                         .json(&HashMap::from([("name", v)]))
                         .unwrap()
                         .send()
@@ -160,10 +168,11 @@ impl Component for App {
                     {
                         Ok(r) => match r.status() {
                             201 => Msg::Confirm("Indicator added".to_string()),
-                            500 => {
-                                Msg::Error("Error with API, please try again later.".to_string())
-                            }
-                            _ => Msg::Error("Undefined response from API".to_string()),
+                            401 => Msg::Error(format!("Error 401: Unauthorized")),
+                            500 => Msg::Error(format!(
+                                "Error 500: Error with API, please try again later."
+                            )),
+                            _ => Msg::Error(format!("Error {}", r.status())),
                         },
 
                         Err(e) => Msg::Error(e.to_string()),
@@ -174,6 +183,7 @@ impl Component for App {
                 None => link.send_message(Msg::Error("No indicator selected".to_string())),
                 Some(v) => link.send_future(async move {
                     match Request::delete(&format!("{API_BASE}/indicators"))
+                        .header("Authorization", &credentials)
                         .json(&HashMap::from([("name", &v)]))
                         .unwrap()
                         .send()
@@ -181,12 +191,13 @@ impl Component for App {
                     {
                         Ok(r) => match r.status() {
                             200 => Msg::Confirm("Indicator removed".to_string()),
+                            401 => Msg::Error(format!("Error 401: Unauthorized")),
                             404 => Msg::Error(format!(
-                                "Cannot remove {v}: not a recently updated indicator."
+                                "Error 404: Cannot remove {v}; not a recently updated indicator."
                             )),
-                            500 => {
-                                Msg::Error("Error with API, please try again later.".to_string())
-                            }
+                            500 => Msg::Error(
+                                "Error 500: Error with API, please try again later.".to_string(),
+                            ),
                             _ => Msg::Error("Undefined response from API".to_string()),
                         },
                         Err(e) => Msg::Error(e.to_string()),
