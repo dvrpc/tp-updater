@@ -29,9 +29,9 @@ const INDICATORS: &[&str] = &[
     "Mortgage Lending",
     "Pavement Conditions",
     "Population Growth",
-    "Roadway Safety",
     "Transit Conditions",
     "Transit Ridership",
+    "Transportation Safety",
     "Water Quality",
 ];
 

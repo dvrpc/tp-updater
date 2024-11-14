@@ -8,9 +8,9 @@ authors = ["Kris Warner <kdwarn@protonmail.com>"]
 
 [dependencies]
 base64 = "0.21"
-dotenvy_macro = "0.15.1"
+dotenvy_macro = "0.15.7"
 gloo-dialogs = "0.1.1"
 gloo-net = "0.2.4"
 wasm-bindgen-futures = "0.4.33"
 web-sys = "0.3.60"
-yew = {version = "0.20", features = ["csr"] }
+yew = {version = "0.21", features = ["csr"] }
